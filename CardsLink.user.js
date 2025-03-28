@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name        CardsLink
-// @version     1.0.1
+// @version     1.0.4
 // @author      Dankinations
-// @description Whenever a card is mentioned in chat, highlight it! (Requires underscript)
+// @description Stylising chat (Requires underscript)
 // @homepage    https://github.com/Dankinations/CardsLink
 // @supportURL  https://github.com/Dankinations/CardsLink
 // @match       https://*.undercards.net/*
@@ -109,31 +109,84 @@ var cardAliases = {
 const underscript = window.underscript;
 const plugin = underscript.plugin("CardsLink", GM_info.version);
 
-// Checking for added stuff in body
-
 function isInsideSpan(txt, htmlString) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlString;
-    const span = tempDiv.querySelector('span');
-    return containsText = span && span.textContent.toLowerCase().includes(txt.toLowerCase());
+
+    const spans = tempDiv.querySelectorAll('span');
+    
+    for (const span of spans) {
+        const spanText = span.textContent.trim().toLowerCase();
+
+        const regex = new RegExp(`\\b${txt.toLowerCase()}\\b`, 'gi');
+        
+        if (regex.test(spanText)) {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 function handleChatMessage(message) {
-    var content = message.innerText
+    let content = message.innerText
+
+    // Coloring Cards
+
     for (idx in cardNames) {
         data = cardNames[idx]
         let regexString = `\\b(${data.name}|${data.alias})\\b`
         let regex = new RegExp(regexString, 'gi');
         if (content.match(regex)) {
-            if (!isInsideSpan(data.name,content) && !isInsideSpan(data.alias,content)) {
-                console.log(data.alias)
-                span = `<span onmouseover="displayCardHelp(this,${data.id}, false);" onmouseleave="removeCardHover();" class="${data.soul}">${content.match(regex)[0]}</span>`
-                content = content.replaceAll(regex, span);
-            }
+            content = content.replaceAll(regex, (match) => {
+                if (isInsideSpan(match,content)) {
+                    return match
+                }
+
+                let span = `<span onmouseover="displayCardHelp(this,${data.id}, false);" onmouseleave="removeCardHover();" class="${data.soul}">${match}</span>`
+                return span
+            });
         }
     };
 
-    message.innerHTML = message.innerHTML.replace(message.innerText,content)
+    // Coloring G/ATK/HP
+
+    let goldRegex = new RegExp("\\d+G", "gi");
+    content = content.replaceAll(goldRegex, (match) => {
+        let span = `<span class="JUSTICE">${match}</span>`
+        return span
+    })
+
+    let hpRegex = new RegExp("\\d+HP", "gi");
+    content = content.replaceAll(hpRegex, (match) => {
+        let span = `<span class="KINDNESS">${match}</span>`
+        return span
+    })
+
+    let atkRegex = new RegExp("\\d+ATK", "gi");
+    content = content.replaceAll(atkRegex, (match) => {
+        let span = `<span class="DETERMINATION">${match}</span>`
+        return span
+    })
+
+    // Coloring card stats
+
+    let fullStatsRegex = new RegExp("([+-]?\\d+)\\/([+-]?\\d+)(?:\\/([+-]?\\d+))?", "g");
+    content = content.replaceAll(fullStatsRegex, (match) => {
+        let split = match.split("/")
+        let span
+
+        if (split[2] !== undefined) {
+            span = `<span class="PATIENCE">${split[0]}</span>/<span class="DETERMINATION">${split[1]}</span>/<span class="KINDNESS">${split[2]}</span>`
+        }
+        else {
+            span = `<span class="DETERMINATION">${split[0]}</span>/<span class="KINDNESS">${split[1]}</span>`
+        }
+
+        return span
+    })
+
+    message.innerHTML = message.innerHTML.replace(message.innerText, content)
 }
 
 function chatInstanceAdded(node) {
@@ -143,7 +196,7 @@ function chatInstanceAdded(node) {
             if (mutation.type === 'childList') {
                 for (let node of mutation.addedNodes) {
                     if (node.classList.contains("message-group")) {
-                        plugin.events.emit(":onChatMessage",{instance:node.getElementsByClassName("chat-message")[0]});
+                        plugin.events.emit(":onChatMessage", { instance: node.getElementsByClassName("chat-message")[0] });
                     }
                 }
             }
@@ -157,7 +210,7 @@ function chatInstanceAdded(node) {
 
     for (x in messageHolder.childNodes) {
         message = messageHolder.childNodes[x]
-        if (typeof(message) === "object") {
+        if (typeof (message) === "object") {
             handleChatMessage(message.getElementsByClassName("chat-message")[0])
         }
     }
@@ -198,7 +251,7 @@ plugin.events.on('allCardsReady', () => {
 
         allCards.forEach(card => {
             var soul = "PATIENCE"
-            var alias = "GIASFECHASDFUOIDH23423425143514351432542hhjjjk234523XSSSUSDGFI"
+            var alias = card.name
             if (card["soul"] !== undefined) {
                 soul = card["soul"]["name"]
             }
@@ -208,8 +261,9 @@ plugin.events.on('allCardsReady', () => {
             if (cardAliases[card.fixedId.toString()] !== undefined) {
                 alias = cardAliases[card.fixedId.toString()]
             }
-            cardNames.push({id:card.id,soul:soul,name:$.i18n(`card-name-${card.id}`, 1), alias:alias})
+            cardNames.push({ id: card.id, soul: soul, name: $.i18n(`card-name-${card.id}`, 1), alias: alias })
         })
         cardNames.sort((a, b) => b.name.length - a.name.length);
+        cardNames.sort((a, b) => b.alias.length - a.alias.length)
     });
 });

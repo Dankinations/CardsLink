@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name        CardsLink
-// @version     1.0.1
+// @version     1.0.4
 // @author      Dankinations
-// @description Whenever a card is mentioned in chat, highlight it! (Requires underscript)
+// @description Stylising chat (Requires underscript)
 // @homepage    https://github.com/Dankinations/CardsLink
 // @supportURL  https://github.com/elytrafae/CardsLink
 // @match       https://*.undercards.net/*
