@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        CardsLink
-// @version     1.0.4
+// @version     1.0.5
 // @author      Dankinations
 // @description Stylising chat (Requires underscript)
 // @homepage    https://github.com/Dankinations/CardsLink

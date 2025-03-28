@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        CardsLink
-// @version     1.0.4
+// @version     1.0.5
 // @author      Dankinations
 // @description Stylising chat (Requires underscript)
 // @homepage    https://github.com/Dankinations/CardsLink
@@ -109,9 +109,9 @@ var cardAliases = {
 const underscript = window.underscript;
 const plugin = underscript.plugin("CardsLink", GM_info.version);
 
-function escapeReplacement(string) {
-    return string.replace(/\$/g, '$$$$');
-}
+function escapeRegex(string) {
+    return string.replace(/[.*+?^=!:${}()|\[\]\/\\]/g, '\\$&');
+  }
 
 function isInsideSpan(txt, htmlString) {
     const tempDiv = document.createElement('div');
@@ -120,7 +120,7 @@ function isInsideSpan(txt, htmlString) {
     const spans = tempDiv.querySelectorAll('span');
 
     for (const span of spans) {
-        if (span.textContent.trim().toLowerCase() === txt.toLowerCase()) {
+        if (span.textContent.toLowerCase().includes(txt.toLowerCase())) {
             return true; 
         }
     }
@@ -186,7 +186,7 @@ function handleChatMessage(message) {
         return span
     })
 
-    message.innerHTML = message.innerHTML.replaceAll(escapeReplacement(message.innerText),content)
+    message.innerHTML = message.innerHTML.replace(message.innerText,content)
 }
 
 function chatInstanceAdded(node) {
