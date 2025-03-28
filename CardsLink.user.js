@@ -1,0 +1,215 @@
+// ==UserScript==
+// @name        CardsLink
+// @version     1.0.1
+// @author      Dankinations
+// @description Whenever a card is mentioned in chat, highlight it! (Requires underscript)
+// @homepage    https://github.com/Dankinations/CardsLink
+// @supportURL  https://github.com/Dankinations/CardsLink
+// @match       https://*.undercards.net/*
+// @updateURL   https://github.com/Dankinations/CardsLink/releases/download/Latest/CardsLink.meta.js
+// @downloadURL https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.user.js
+// @grant       none
+// @icon        https://www.google.com/s2/favicons?sz=64&domain=undercards.net
+// @run-at      document-idle
+// ==/UserScript==
+
+let allCards;
+var cardNames = [];
+var cardAliases = {
+    "8": "mommy",
+    "30": "bp",
+    "38": "rg1",
+    "39": "rg2",
+    "60": "paps",
+    "62": "asdree",
+    "64": "mttex mtt ex",
+    "66": "wtf",
+    "68": "achance",
+    "69": "fmemory",
+    "71": "fenergy",
+    "82": "merchire",
+    "88": "btreat",
+    "89": "pgas polgas pollgas pollugas",
+    "92": "fon",
+    "95": "tow",
+    "106": "undyne the undying",
+    "110": "mttneo mtt neo",
+    "117": "of",
+    "140": "polibear",
+    "145": "db1",
+    "146": "db2",
+    "150": "ncg",
+    "183": "pod",
+    "201": "dmtt",
+    "203": "aod",
+    "214": "casdyne",
+    "237": "phamster moni!!!",
+    "239": "snowsign",
+    "254": "cpaps",
+    "258": "bq",
+    "262": "mmm",
+    "267": "crystomb ctomb",
+    "296": "wormjar wormsjar jow",
+    "299": "polibear",
+    "315": "rg3",
+    "316": "rg4",
+    "318": "falvin",
+    "414": "pmascot",
+    "421": "astruck asstruck",
+    "437": "shyagent sagent ralsei neo",
+    "453": "cotg",
+    "455": "phouse",
+    "471": "cblaster",
+    "490": "pod",
+    "503": "libloox",
+    "504": "blancer",
+    "505": "skris",
+    "508": "hoodsei hsei",
+    "515": "hhathy",
+    "520": "absart abs art",
+    "531": "ttoriel",
+    "532": "etdb",
+    "533": "gertomb gtomb",
+    "573": "elimduck elim duck",
+    "579": "bqueen",
+    "581": "gmascot",
+    "642": "pblook",
+    "661": "cws cyber sign",
+    "673": "bplush",
+    "700": "vb",
+    "707": "captn rouxl",
+    "714": "cjester",
+    "716": "rpaps",
+    "717": "sneo",
+    "726": "pkris",
+    "734": "cwire",
+    "742": "cg1",
+    "743": "cg2",
+    "754": "fheads",
+    "756": "spamshop sshop",
+    "758": "bneo",
+    "760": "butsei",
+    "761": "bstatue",
+    "763": "cpanel",
+    "767": "bdancer baldancer balancer",
+    "772": "jfs",
+    "773": "shytomb stomb",
+    "774": "dlancer dancer",
+    "775": "galadino",
+    "776": "tlights",
+    "782": "talphys",
+    "794": "gq",
+    "815": "dalvdrobe",
+    "828": "mommy",
+    "838": "zmartlet",
+    "848": "sansino csans",
+    "853": "chutomb ctomb",
+    "869": "galadino"
+};
+const underscript = window.underscript;
+const plugin = underscript.plugin("CardsLink", GM_info.version);
+
+// Checking for added stuff in body
+
+function isInsideSpan(txt, htmlString) {
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlString;
+    const span = tempDiv.querySelector('span');
+    return containsText = span && span.textContent.toLowerCase().includes(txt.toLowerCase());
+}
+
+function handleChatMessage(message) {
+    var content = message.innerText
+    for (idx in cardNames) {
+        data = cardNames[idx]
+        let regexString = `\\b(${data.name}|${data.alias})\\b`
+        let regex = new RegExp(regexString, 'gi');
+        if (content.match(regex)) {
+            if (!isInsideSpan(data.name,content) && !isInsideSpan(data.alias,content)) {
+                console.log(data.alias)
+                span = `<span onmouseover="displayCardHelp(this,${data.id}, false);" onmouseleave="removeCardHover();" class="${data.soul}">${content.match(regex)[0]}</span>`
+                content = content.replaceAll(regex, span);
+            }
+        }
+    };
+
+    message.innerHTML = message.innerHTML.replace(message.innerText,content)
+}
+
+function chatInstanceAdded(node) {
+
+    function chatObserverCallback(mutationsList, observer) {
+        mutationsList.forEach((mutation) => {
+            if (mutation.type === 'childList') {
+                for (let node of mutation.addedNodes) {
+                    if (node.classList.contains("message-group")) {
+                        plugin.events.emit(":onChatMessage",{instance:node.getElementsByClassName("chat-message")[0]});
+                    }
+                }
+            }
+        });
+    }
+
+    const bodyObserver = new MutationObserver(chatObserverCallback);
+    const config = { childList: true };
+    bodyObserver.observe(node.getElementsByClassName("chat-messages")[0], config);
+    const messageHolder = node.getElementsByClassName("chat-messages")[0]
+
+    for (x in messageHolder.childNodes) {
+        message = messageHolder.childNodes[x]
+        if (typeof(message) === "object") {
+            handleChatMessage(message.getElementsByClassName("chat-message")[0])
+        }
+    }
+
+}
+
+function bodyObserverCallback(mutationsList, observer) {
+    mutationsList.forEach((mutation) => {
+        if (mutation.type === 'childList') {
+            for (let node of mutation.addedNodes) {
+                if (node.classList.contains("chat-box")) {
+                    chatInstanceAdded(node);
+                }
+            }
+        }
+    });
+}
+
+const bodyObserver = new MutationObserver(bodyObserverCallback);
+const config = { childList: true };
+bodyObserver.observe(document.body, config);
+
+plugin.events.on(":onChatMessage", (data) => {
+    handleChatMessage(data.instance)
+});
+
+plugin.events.on('allCardsReady', () => {
+    allCards = window.allCards
+    plugin.events.on("translation:loaded", (data) => {
+        RarityToColor = {
+            BASE: "gray",
+            COMMON: "PATIENCE",
+            RARE: "INTEGRITY",
+            EPIC: "PERSEVERANCE",
+            LEGENDARY: "JUSTICE",
+            DETERMINATION: "DETERMINATION"
+        }
+
+        allCards.forEach(card => {
+            var soul = "PATIENCE"
+            var alias = "GIASFECHASDFUOIDH23423425143514351432542hhjjjk234523XSSSUSDGFI"
+            if (card["soul"] !== undefined) {
+                soul = card["soul"]["name"]
+            }
+            else {
+                soul = RarityToColor[card.rarity]
+            }
+            if (cardAliases[card.fixedId.toString()] !== undefined) {
+                alias = cardAliases[card.fixedId.toString()]
+            }
+            cardNames.push({id:card.id,soul:soul,name:$.i18n(`card-name-${card.id}`, 1), alias:alias})
+        })
+        cardNames.sort((a, b) => b.name.length - a.name.length);
+    });
+});
