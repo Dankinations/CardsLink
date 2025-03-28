@@ -109,23 +109,23 @@ var cardAliases = {
 const underscript = window.underscript;
 const plugin = underscript.plugin("CardsLink", GM_info.version);
 
+function escapeReplacement(string) {
+    return string.replace(/\$/g, '$$$$');
+}
+
 function isInsideSpan(txt, htmlString) {
     const tempDiv = document.createElement('div');
     tempDiv.innerHTML = htmlString;
 
     const spans = tempDiv.querySelectorAll('span');
-    
-    for (const span of spans) {
-        const spanText = span.textContent.trim().toLowerCase();
 
-        const regex = new RegExp(`\\b${txt.toLowerCase()}\\b`, 'gi');
-        
-        if (regex.test(spanText)) {
-            return true;
+    for (const span of spans) {
+        if (span.textContent.trim().toLowerCase() === txt.toLowerCase()) {
+            return true; 
         }
     }
 
-    return false;
+    return false;  
 }
 
 function handleChatMessage(message) {
@@ -186,7 +186,7 @@ function handleChatMessage(message) {
         return span
     })
 
-    message.innerHTML = message.innerHTML.replace(message.innerText, content)
+    message.innerHTML = message.innerHTML.replaceAll(escapeReplacement(message.innerText),content)
 }
 
 function chatInstanceAdded(node) {
