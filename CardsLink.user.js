@@ -6,8 +6,9 @@
 // @homepage    https://github.com/Dankinations/CardsLink
 // @supportURL  https://github.com/Dankinations/CardsLink
 // @match       https://*.undercards.net/*
-// @updateURL   https://github.com/Dankinations/CardsLink/releases/download/Latest/CardsLink.meta.js
+// @updateURL   https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.meta.js
 // @downloadURL https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.user.js
+// @require     https://raw.githubusercontent.com/UCProjects/UnderScript/master/src/checkerV2.js
 // @grant       none
 // @icon        https://www.google.com/s2/favicons?sz=64&domain=undercards.net
 // @run-at      document-idle
