@@ -1,16 +1,16 @@
 // ==UserScript==
 // @name        CardsLink
-// @version     1.0.5
+// @version     1.0.6
 // @author      Dankinations
 // @description Stylising chat (Requires underscript)
 // @homepage    https://github.com/Dankinations/CardsLink
 // @supportURL  https://github.com/Dankinations/CardsLink
 // @match       https://*.undercards.net/*
-// @updateURL   https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.meta.js
+// @updateURL   https://github.com/Dankinations/CardsLink/releases/download/Latest/CardsLink.meta.js
 // @downloadURL https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.user.js
-// @require     https://raw.githubusercontent.com/UCProjects/UnderScript/master/src/checkerV2.js
 // @grant       none
 // @icon        https://www.google.com/s2/favicons?sz=64&domain=undercards.net
+// @require https://raw.githubusercontent.com/UCProjects/UnderScript/master/src/checkerV2.js
 // @run-at      document-idle
 // ==/UserScript==
 
@@ -110,9 +110,112 @@ var cardAliases = {
 const underscript = window.underscript;
 const plugin = underscript.plugin("CardsLink", GM_info.version);
 
-function escapeRegex(string) {
-    return string.replace(/[.*+?^=!:${}()|\[\]\/\\]/g, '\\$&');
-  }
+// Settings
+
+const types = [
+    'array', // stores an array of strings
+    'boolean', // default
+    'color', // color selector
+    'list', // drag-drop list items
+    'map', // key -> value list
+    'password', // hidden input box
+    'remove', // deletes itself when selected
+    'select', // drop down menu
+    'slider', // sliding bar
+    'text', // input box
+];
+
+const AliasesEnabled = plugin.settings().add({
+    key: "AliasesEnabled",
+    name: "Link Cards Using Aliases",
+    type: "boolean",
+    note: "Determines whether card aliases should be highlighted in chat.",
+    default: true,
+    category: "Main Settings"
+});
+
+const RarityColoring = plugin.settings().add({
+    key: "RarityColoring",
+    name: "Rarity Coloring",
+    type: "boolean",
+    note: "Determines whether card highlights in chat should be colored based on rarity.",
+    default: true,
+    category: "Color Settings",
+    onChange: () => BaseColor.refresh(),
+});
+
+const BaseColor = plugin.settings().add({
+    key: "BaseColor",
+    name: "Base color for card mentions in chat.",
+    type: "select",
+    note: "Determines the card highlights' color.",
+    default: "Perseverance",
+    category: "Color Settings",
+    options: [
+        "Kindness",
+        "Justice",
+        "Bravery",
+        "Perseverance",
+        "Integrity",
+        "Patience",
+        "Determination",
+        "Gray"
+    ],
+    disabled: () => RarityColoring.value(),
+});
+
+BaseColor.refresh()
+
+class SettingType {
+    constructor(name) {
+        const isString = typeof name === 'string';
+        this.name = name && isString ? name.trim() : name;
+        if (!isString || !this.name) throw new Error('Name not provided');
+    }
+    value(val, data = undefined) {
+        throw new Error('Value not implemented');
+    }
+    encode(value) {
+        if (typeof value === 'object') return JSON.stringify(value);
+        return value;
+    }
+    default(data = undefined) {
+        return null;
+    }
+    element(value, update, {
+        data = undefined,
+        remove = false,
+        container,
+        key = '',
+    }) {
+        throw new Error('Element not implemented');
+    }
+    styles() {
+        return [];
+    }
+    labelFirst() {
+        return true;
+    }
+}
+
+export class CardValue extends SettingType {
+    constructor(name = 'text') {
+        super(name);
+    }
+    value(val) {
+        return val;
+    }
+    element(value, update) {
+        return $('<input type="text">')
+            .val(value)
+            .on('blur.script', (e) => update(e.target.value))
+            .css({
+                'background-color': 'transparent',
+            });
+    }
+}
+
+// Other things
 
 function isInsideSpan(txt, htmlString) {
     const tempDiv = document.createElement('div');
@@ -122,72 +225,88 @@ function isInsideSpan(txt, htmlString) {
 
     for (const span of spans) {
         if (span.textContent.toLowerCase().includes(txt.toLowerCase())) {
-            return true; 
+            return true;
         }
     }
 
-    return false;  
+    return false;
+}
+
+function escapeRegex(string) {
+    return string.replace(/[.*+?^=!:${}()|\[\]\/\\]/g, '\\$&');
 }
 
 function handleChatMessage(message) {
-    let content = message.innerText
+    let content = message.innerText;
 
     // Coloring Cards
 
-    for (idx in cardNames) {
-        data = cardNames[idx]
-        let regexString = `\\b(${data.name}|${data.alias})\\b`
+    cardNames.forEach(data => {
+        let regexString = `\\b${data.name}\\b`
         let regex = new RegExp(regexString, 'gi');
+        let color = data.soul
+
+        if (AliasesEnabled.value()) {
+            regexString = `\\b(${data.name}|${data.alias})\\b`;
+        };
+
+        if (!RarityColoring.value()) {
+            color = BaseColor.value().toUpperCase()
+            if (BaseColor.value() == "Gray") {
+                color = "gray"
+            }
+        }
+
         if (content.match(regex)) {
             content = content.replaceAll(regex, (match) => {
-                if (isInsideSpan(match,content)) {
+                if (isInsideSpan(match, content)) {
                     return match
                 }
 
-                let span = `<span onmouseover="displayCardHelp(this,${data.id}, false);" onmouseleave="removeCardHover();" class="${data.soul}">${match}</span>`
+                let span = `<span onmouseover="displayCardHelp(this,${data.id}, false);" onmouseleave="removeCardHover();" class="${color}">${match}</span>`
                 return span
             });
         }
-    };
+    });
 
     // Coloring G/ATK/HP
 
-    let goldRegex = new RegExp("\\d+G", "gi");
+    let goldRegex = new RegExp("\\d+\\s?g", "gi");
     content = content.replaceAll(goldRegex, (match) => {
-        let span = `<span class="JUSTICE">${match}</span>`
-        return span
+        let span = `<span class="JUSTICE">${match}</span>`;
+        return span;
     })
 
-    let hpRegex = new RegExp("\\d+HP", "gi");
+    let hpRegex = new RegExp("\\d+\\s?hp", "gi");
     content = content.replaceAll(hpRegex, (match) => {
-        let span = `<span class="KINDNESS">${match}</span>`
-        return span
+        let span = `<span class="KINDNESS">${match}</span>`;
+        return span;
     })
 
-    let atkRegex = new RegExp("\\d+ATK", "gi");
+    let atkRegex = new RegExp("\\d+\\s?atk", "gi");
     content = content.replaceAll(atkRegex, (match) => {
-        let span = `<span class="DETERMINATION">${match}</span>`
-        return span
+        let span = `<span class="DETERMINATION">${match}</span>`;
+        return span;
     })
 
     // Coloring card stats
 
     let fullStatsRegex = new RegExp("([+-]?\\d+)\\/([+-]?\\d+)(?:\\/([+-]?\\d+))?", "g");
     content = content.replaceAll(fullStatsRegex, (match) => {
-        let split = match.split("/")
-        let span
+        let split = match.split("/");
+        let span;
 
         if (split[2] !== undefined) {
-            span = `<span class="PATIENCE">${split[0]}</span>/<span class="DETERMINATION">${split[1]}</span>/<span class="KINDNESS">${split[2]}</span>`
+            span = `<span class="PATIENCE">${split[0]}</span>/<span class="DETERMINATION">${split[1]}</span>/<span class="KINDNESS">${split[2]}</span>`;
         }
         else {
-            span = `<span class="DETERMINATION">${split[0]}</span>/<span class="KINDNESS">${split[1]}</span>`
+            span = `<span class="DETERMINATION">${split[0]}</span>/<span class="KINDNESS">${split[1]}</span>`;
         }
 
-        return span
+        return span;
     })
 
-    message.innerHTML = message.innerHTML.replace(message.innerText,content)
+    message.innerHTML = message.innerHTML.replace(message.innerText, content);
 }
 
 function chatInstanceAdded(node) {
@@ -197,7 +316,7 @@ function chatInstanceAdded(node) {
             if (mutation.type === 'childList') {
                 for (let node of mutation.addedNodes) {
                     if (node.classList.contains("message-group")) {
-                        plugin.events.emit(":onChatMessage", { instance: node.getElementsByClassName("chat-message")[0] });
+                        plugin.events.emit("onChatMessage", { instance: node.getElementsByClassName("chat-message")[0] });
                     }
                 }
             }
@@ -207,64 +326,81 @@ function chatInstanceAdded(node) {
     const bodyObserver = new MutationObserver(chatObserverCallback);
     const config = { childList: true };
     bodyObserver.observe(node.getElementsByClassName("chat-messages")[0], config);
-    const messageHolder = node.getElementsByClassName("chat-messages")[0]
+    const messageHolder = node.getElementsByClassName("chat-messages")[0];
 
     for (x in messageHolder.childNodes) {
-        message = messageHolder.childNodes[x]
+        message = messageHolder.childNodes[x];
         if (typeof (message) === "object") {
-            handleChatMessage(message.getElementsByClassName("chat-message")[0])
+            handleChatMessage(message.getElementsByClassName("chat-message")[0]);
         }
     }
 
 }
 
-function bodyObserverCallback(mutationsList, observer) {
-    mutationsList.forEach((mutation) => {
-        if (mutation.type === 'childList') {
-            for (let node of mutation.addedNodes) {
-                if (node.classList.contains("chat-box")) {
-                    chatInstanceAdded(node);
-                }
-            }
-        }
-    });
-}
+// function bodyObserverCallback(mutationsList, observer) {
+//     mutationsList.forEach((mutation) => {
+//         if (mutation.type === 'childList') {
+//             for (let node of mutation.addedNodes) {
+//                 if (node.classList.contains("chat-box")) {
+//                     chatInstanceAdded(node);
+//                 }
+//             }
+//         }
+//     });
+// }
 
-const bodyObserver = new MutationObserver(bodyObserverCallback);
-const config = { childList: true };
-bodyObserver.observe(document.body, config);
+// const bodyObserver = new MutationObserver(bodyObserverCallback);
+// const config = { childList: true };
+// bodyObserver.observe(document.body, config);
 
-plugin.events.on(":onChatMessage", (data) => {
+plugin.events.on("Chat:Connected", () => {
+    console.log("Chat connected")
+})
+
+plugin.events.on("Chat:Reconnected", () => {
+    console.log("reconnected")
+})
+
+plugin.events.on("onChatMessage", (data) => {
     handleChatMessage(data.instance)
 });
 
 plugin.events.on('allCardsReady', () => {
     allCards = window.allCards
     plugin.events.on("translation:loaded", (data) => {
-        RarityToColor = {
+        let RarityToColor = {
             BASE: "gray",
             COMMON: "PATIENCE",
             RARE: "INTEGRITY",
             EPIC: "PERSEVERANCE",
             LEGENDARY: "JUSTICE",
-            DETERMINATION: "DETERMINATION"
-        }
+            DETERMINATION: "DETERMINATION",
+            TOKEN: "KINDNESS"
+        };
 
         allCards.forEach(card => {
-            var soul = "PATIENCE"
-            var alias = card.name
+            var soul = "PATIENCE";
+            var alias = card.name;
+
             if (card["soul"] !== undefined) {
-                soul = card["soul"]["name"]
+                soul = card["soul"]["name"];
             }
             else {
-                soul = RarityToColor[card.rarity]
+                soul = RarityToColor[card.rarity];
             }
+
             if (cardAliases[card.fixedId.toString()] !== undefined) {
-                alias = cardAliases[card.fixedId.toString()]
+                alias = cardAliases[card.fixedId.toString()];
             }
-            cardNames.push({ id: card.id, soul: soul, name: $.i18n(`card-name-${card.id}`, 1), alias: alias })
-        })
+
+            cardNames.push({
+                id: card.id,
+                soul: soul,
+                name: $.i18n(`card-name-${card.id}`, 1),
+                alias: alias
+            });
+
+        });
         cardNames.sort((a, b) => b.name.length - a.name.length);
-        cardNames.sort((a, b) => b.alias.length - a.alias.length)
     });
 });
