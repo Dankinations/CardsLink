@@ -11,6 +11,7 @@
 // @grant       none
 // @icon        https://www.google.com/s2/favicons?sz=64&domain=undercards.net
 // @require https://raw.githubusercontent.com/UCProjects/UnderScript/master/src/checkerV2.js
+// @require https://raw.githubusercontent.com/Dankinations/DLib/refs/heads/main/Externals/Checker.js
 // @run-at      document-idle
 // ==/UserScript==
 
