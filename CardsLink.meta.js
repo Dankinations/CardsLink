@@ -6,7 +6,7 @@
 // @homepage    https://github.com/Dankinations/CardsLink
 // @supportURL  https://github.com/Dankinations/CardsLink
 // @match       https://*.undercards.net/*
-// @updateURL   https://github.com/Dankinations/CardsLink/releases/download/Latest/CardsLink.meta.js
+// @updateURL   https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.meta.js
 // @downloadURL https://github.com/Dankinations/CardsLink/releases/latest/download/CardsLink.user.js
 // @grant       none
 // @run-at      document-idle
