@@ -166,55 +166,6 @@ const BaseColor = plugin.settings().add({
 
 BaseColor.refresh()
 
-class SettingType {
-    constructor(name) {
-        const isString = typeof name === 'string';
-        this.name = name && isString ? name.trim() : name;
-        if (!isString || !this.name) throw new Error('Name not provided');
-    }
-    value(val, data = undefined) {
-        throw new Error('Value not implemented');
-    }
-    encode(value) {
-        if (typeof value === 'object') return JSON.stringify(value);
-        return value;
-    }
-    default(data = undefined) {
-        return null;
-    }
-    element(value, update, {
-        data = undefined,
-        remove = false,
-        container,
-        key = '',
-    }) {
-        throw new Error('Element not implemented');
-    }
-    styles() {
-        return [];
-    }
-    labelFirst() {
-        return true;
-    }
-}
-
-export class CardValue extends SettingType {
-    constructor(name = 'text') {
-        super(name);
-    }
-    value(val) {
-        return val;
-    }
-    element(value, update) {
-        return $('<input type="text">')
-            .val(value)
-            .on('blur.script', (e) => update(e.target.value))
-            .css({
-                'background-color': 'transparent',
-            });
-    }
-}
-
 // Other things
 
 function isInsideSpan(txt, htmlString) {
